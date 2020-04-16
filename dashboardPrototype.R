@@ -22,7 +22,7 @@ ui <- dashboardPage(
         # Dashboard tab content
         tabItem(tabName = "statewide",
                 h1("More information to follow"),
-                p("Will include drill down plots to compare regions and programs data for year")
+                fluidRow(cashTotalsUI('cashMoney'))
         ),
         tabItem(tabName = 'BRRO', eachRegionUI("BRRO_"))
       )))
@@ -32,6 +32,10 @@ server <- function(input, output) {
   # display the loading feature until data
   load_data()
   
+  # Statewide Modules
+  callModule(cashTotals, 'cashMoney', dat)
+  
+  # Regional Modules
   callModule(eachRegion, "BRRO_", filter(dat, `Facility Region` == "BRRO"))
 }
 

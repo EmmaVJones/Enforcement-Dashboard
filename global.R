@@ -4,6 +4,7 @@ library(tidyverse)
 library(plotly)
 library(lubridate)
 
+source('modules/cashCivilChargesModule.R')
 
 # Loading screen
 load_data <- function() {
