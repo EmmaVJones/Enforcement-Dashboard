@@ -6,6 +6,8 @@ library(lubridate)
 # Bring in test dataset, had to manually convert from .xls (Logi pull default) to .csv and delete header matter
 # Pull was from April 14, 2020 to Jan 1, 2019
 dat <- read_csv('LogiPulls/01012019_04142020.csv') %>%
+  # drop all rows with no data
+  drop_na(`Facility Name`, `EA Number`) %>%
   # first fix date fields
   mutate(`NOV Date` = as.POSIXct(`NOV Date`, format = "%m/%d/%Y", tz = 'EST'),
          `Executed Date` = as.POSIXct(`Executed Date`, format = "%m/%d/%Y", tz = 'EST'),
@@ -136,3 +138,13 @@ terminated %>%
   layout(yaxis = list(title = 'Count',
                       tickformat=',d'), # make integer y axis
          xaxis = list(title = 'Program Name'))
+
+
+
+
+
+
+## Statewide View- mess with plots and metrics to best tell top level story
+
+
+
