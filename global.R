@@ -118,7 +118,8 @@ eachRegion <- function(input,output, session, regionalData){
                                              paste("Program Name: ",Program),
                                              paste("Category Count: ",`Active > 365`),
                                              paste("Program Total: ", `Program Total`))) %>%
-      layout(yaxis = list(title = 'Count'),
+      layout(height = 250,
+             yaxis = list(title = 'Count'),
              xaxis = list(title = 'Program Name'), 
              barmode = 'stack')
   })
@@ -143,7 +144,8 @@ eachRegion <- function(input,output, session, regionalData){
                 hoverinfo="text",text=~paste(sep="<br>",
                                              paste("Program Name: ",Program),
                                              paste("Program Total: ", `Program Total`))) %>%
-      layout(yaxis = list(title = 'Count',
+      layout(height = 250,
+             yaxis = list(title = 'Count',
                           tickformat=',d'), # make integer y axis
              xaxis = list(title = 'Program Name'))  })
   
@@ -166,7 +168,8 @@ eachRegion <- function(input,output, session, regionalData){
                 hoverinfo="text",text=~paste(sep="<br>",
                                              paste("Program Name: ",Program),
                                              paste("Program Total: ", `Program Total`))) %>%
-      layout(yaxis = list(title = 'Count',
+      layout(height = 250,
+             yaxis = list(title = 'Count',
                           tickformat=',d'), # make integer y axis
              xaxis = list(title = 'Program Name')) })
   

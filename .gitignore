@@ -40,6 +40,8 @@ vignettes/*.pdf
 
 
 # drop all data
+*.docx
+*.zip
 LogiPulls/
 PRO Logi Excel Data/
 rsconnect/
