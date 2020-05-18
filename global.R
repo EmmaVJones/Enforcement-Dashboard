@@ -5,6 +5,7 @@ library(plotly)
 library(lubridate)
 
 source('modules/cashCivilChargesModule.R')
+source('modules/statewideModules.R')
 
 # Loading screen
 load_data <- function() {
@@ -33,8 +34,15 @@ dat <- read_csv('LogiPulls/01012019_04142020.csv') %>%
                                        `Program Name` %in% c("UST", "AST") ~ "AST/UST", 
                                        TRUE ~ as.character(`Program Name`)))) %>%
   # add date of pull and calculate days Pending
-  mutate(pullDate = Sys.Date(),
+  mutate(pullDate = as.Date('2020-04-14'), #Sys.Date(),
          `Days Pending` = trunc(time_length(interval(`NOV Date`, pullDate), unit = 'day')))
+
+
+
+
+OrgData<- read_csv('LOGIPulls/OrgCharts.csv')
+
+Referral<- read_csv('LOGIPulls/ReferralRates.csv')
 
 
 # tabItem module
@@ -42,11 +50,30 @@ eachRegionUI <- function(id){
   ns <- NS(id)
   tagList(
     fluidRow(
-      box(title = "Workload Summary", height = 300),
-      tabBox(title = h4(strong("Cases Pending")), height = 300, id = "tabBox_casesPending",
+      uiOutput(ns("Manager")),
+      uiOutput(ns("Specialists"))
+      
+    ),
+    fluidRow(
+      box(title =  h4(strong("Workload Summary")),footer = paste0("*Case Capacity and FTE Deficit are determined by capcity assigned in the Organization Chart (above); ",  "FTE Deficit calculation assumes no vacant positions."), height = 350,
+          column(width=6, textOutput(ns("pendingcases")), br(),
+                 textOutput(ns("pendingcasesover365")), br(),
+                 textOutput(ns("pendingcasesless365")), br(),
+                 textOutput(ns("MonitoredCases")),  br(), 
+                 textOutput(ns("TerminatedCases"))),
+          column(width = 6, textOutput(ns("CaseCapacity")), br(),
+                 textOutput(ns("Referral")), br(),
+                 uiOutput(ns("FTERef")), br(),
+                 uiOutput(ns("CurrentFTE")), br(), 
+                 uiOutput(ns("RefFTEequ"))
+          )),
+      
+      
+      tabBox(title = h4(strong("Cases Pending")), height = 350, id = "tabBox_casesPending",
              tabPanel("Summary Plot View",  plotlyOutput(ns("casesPending"), height = 250)),
              tabPanel("Summary Table View", DT::dataTableOutput(ns("casesPendingTable"))),
              tabPanel("Raw Data Table", div(DT::dataTableOutput(ns("raw_casesPendingTable")), style = "font-size:80%")))),
+    
     fluidRow(
       tabBox(title = h4(strong("Cases Terminated")), height = 300, id = "tabBox_casesPending",
              tabPanel("Summary Plot View",  plotlyOutput(ns("casesTerminated"), height = 250)),
@@ -61,11 +88,28 @@ eachRegionUI <- function(id){
   )
 }
 
+
 eachRegion <- function(input,output, session, regionalData){
   pending <- reactive({
     filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent")) %>%
       mutate(`Pending Status` = as.factor(case_when(`Days Pending` >= 365 ~ "Active > 365", 
                                                     TRUE ~ "Active < 365")))  })
+  
+  pendingTotal <- reactive({pending()%>%
+      nrow()
+  }) 
+  
+  PendingOneyear<- reactive({
+    pending() %>%
+      filter(`Days Pending` >= 365) %>%
+      nrow()
+  })
+  
+  Pendingless<-reactive({
+    pending()%>%
+      filter(`Days Pending`<= 365)%>%
+      nrow()
+  })
   
   pendingPlot <- reactive({
     req(pending())
@@ -77,7 +121,11 @@ eachRegion <- function(input,output, session, regionalData){
       group_by(`Pending Status`, Program) %>%
       summarize(Total = n()) %>%
       left_join(programTotals, by = "Program") %>%
-      pivot_wider(names_from = `Pending Status`, values_from = Total)
+      pivot_wider(names_from = `Pending Status`, values_from = Total) %>%
+      # in case nothing in either category
+      rowwise() %>%
+      mutate(`Active > 365` = ifelse("Active > 365" %in% names(.), `Active > 365`, 0),
+             `Active < 365` = ifelse("Active < 365" %in% names(.), `Active < 365`, 0))
     return(pendingPlot)
   })
   
@@ -87,6 +135,12 @@ eachRegion <- function(input,output, session, regionalData){
            `Status Code` %in% c("Terminated")) %>%
       group_by(Program) %>%
       mutate(`Program Total` = n())  })
+  
+  
+  terminatedTotal<- reactive({
+    terminated()%>%
+      nrow()
+  })
   
   terminatedPlot <- reactive({
     req(terminated())
@@ -100,28 +154,71 @@ eachRegion <- function(input,output, session, regionalData){
       mutate(`Program Total` = n()) })
   
   
+  monitoredTotal<- reactive({
+    monitored() %>%
+      nrow()
+  })
+  
+  
   monitoredPlot <- reactive({
     req(monitored())
     monitored() %>%
       distinct(Program, .keep_all = TRUE) %>%
       dplyr::select(Program, `Program Total`)  })
   
+  
+  
+  ### Lucy's Boxes
+  
+  output$pendingcases <- renderText({
+    paste0("Pending Cases: ", pendingTotal())
+    
+  })
+  
+  
+  output$pendingcasesover365<-renderText({
+    paste0("Pending Cases > 365 days: ", PendingOneyear())
+    
+  })
+  
+  output$pendingcasesless365<- renderText({
+    paste0("Pending Cases < 365 days: ", Pendingless())
+  })
+  
+  
+  output$MonitoredCases<- renderText({
+    paste0("Monitored Cases: ", monitoredTotal())
+    
+  })
+  
+  output$TerminatedCases<- renderText({
+    paste0("Terminated Cases: ", terminatedTotal())
+  })
+  
+  #######
+  
+  
   output$casesPending <- renderPlotly({
     req(pendingPlot())
-    plot_ly(data = pendingPlot(), x = ~Program, y = ~`Active < 365`, type = 'bar', name = 'Active < 365',
-            hoverinfo="text",text=~paste(sep="<br>",
-                                         paste("Program Name: ",Program),
-                                         paste("Category Count: ",`Active < 365`),
-                                         paste("Program Total: ", `Program Total`))) %>%
-      add_trace(y = ~`Active > 365`, name = "Active > 365",
-                hoverinfo="text",text=~paste(sep="<br>",
-                                             paste("Program Name: ",Program),
-                                             paste("Category Count: ",`Active > 365`),
-                                             paste("Program Total: ", `Program Total`))) %>%
-      layout(height = 250,
-             yaxis = list(title = 'Count'),
-             xaxis = list(title = 'Program Name'), 
-             barmode = 'stack')
+    if(nrow(filter(pendingPlot(), !is.na(Program))) > 0 ){
+      plot_ly(data = pendingPlot(), x = ~Program, y = ~`Active < 365`, type = 'bar', name = 'Active < 365',
+              hoverinfo="text",text=~paste(sep="<br>",
+                                           paste("Program Name: ",Program),
+                                           paste("Category Count: ",`Active < 365`),
+                                           paste("Program Total: ", `Program Total`))) %>%
+        add_trace(y = ~`Active > 365`, name = "Active > 365",
+                  hoverinfo="text",text=~paste(sep="<br>",
+                                               paste("Program Name: ",Program),
+                                               paste("Category Count: ",`Active > 365`),
+                                               paste("Program Total: ", `Program Total`))) %>%
+        layout(height = 250,
+               yaxis = list(title = 'Count'),
+               xaxis = list(title = 'Program Name'), 
+               barmode = 'stack')
+    } else {
+      NULL
+    }
+    
   })
   
   output$casesPendingTable <- DT::renderDataTable({
@@ -130,11 +227,12 @@ eachRegion <- function(input,output, session, regionalData){
   
   output$raw_casesPendingTable <- DT::renderDataTable({
     req(pending())
-    DT::datatable(pending(), rownames = FALSE, extensions = 'Buttons',  
+    DT::datatable(dplyr::select(pending(), `Facility Name`:Comments), rownames = FALSE, extensions = 'Buttons',  
                   options = list(dom = 'Bft', scrollX = TRUE, scrollY = "125px", autoWidth = TRUE,
                                  buttons=list('copy',
                                               list(extend='csv',filename=paste('pendingConsent_',unique(pending()$`Facility Region`),'_',
-                                                                               unique(pending()$pullDate),'.csv',sep='')))))  })
+                                                                               unique(pending()$pullDate),'.csv',sep=''))))) %>%
+      DT::formatStyle("Comments","white-space"="nowrap")  })
   
   
   output$casesTerminated <- renderPlotly({
@@ -155,11 +253,12 @@ eachRegion <- function(input,output, session, regionalData){
   
   output$raw_casesTerminatedTable <- DT::renderDataTable({
     req(terminated())
-    DT::datatable(terminated(), rownames = FALSE, extensions = 'Buttons',  
+    DT::datatable(dplyr::select(terminated(), `Facility Name`:Comments), rownames = FALSE, extensions = 'Buttons',  
                   options = list(dom = 'Bft', scrollX = TRUE, scrollY = "125px", autoWidth = TRUE,
                                  buttons=list('copy',
                                               list(extend='csv',filename=paste('terminatedConsent_',unique(terminated()$`Facility Region`),'_',
-                                                                               unique(terminated()$pullDate),'.csv',sep='')))))  })
+                                                                               unique(terminated()$pullDate),'.csv',sep=''))))) %>%
+      DT::formatStyle("Comments","white-space"="nowrap") })
   
   output$casesMonitored <- renderPlotly({
     req(terminatedPlot())
@@ -179,10 +278,114 @@ eachRegion <- function(input,output, session, regionalData){
   
   output$raw_casesMonitoredTable <- DT::renderDataTable({
     req(monitored())
-    DT::datatable(monitored(), rownames = FALSE, extensions = 'Buttons', 
+    DT::datatable(dplyr::select(monitored(), `Facility Name`:Comments), rownames = FALSE, extensions = 'Buttons', 
                   options = list(dom = 'Bft', scrollX = TRUE, scrollY = "125px", autoWidth = TRUE,
                                  buttons=list('copy',
                                               list(extend='csv',filename=paste('monitoredConsent_',unique(monitored()$`Facility Region`),'_',
-                                                                               unique(monitored()$pullDate),'.csv',sep='')))))  })
+                                                                               unique(monitored()$pullDate),'.csv',sep=''))))) %>%
+      DT::formatStyle("Comments","white-space"="nowrap") })
+  
+}
+
+
+orgchart<-function(input,output, session, OrgData, Referral, regionalData){
+  
+  pending <- reactive({
+    filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent")) %>%
+      mutate(`Pending Status` = as.factor(case_when(`Days Pending` >= 365 ~ "Active > 365", 
+                                                    TRUE ~ "Active < 365")))  })
+  
+  manager<-reactive({
+    filter(OrgData, Position %in% c("Manager", "Manager/Vacant","Director", "Program Coordinator", "Team Leader/Vacant"))
+  })
+  
+  Specialist<- reactive({
+    filter(OrgData, `Position` %in% c("Enforcement Specialist", "Enforcement Specialist/Vacant", "Administrative and Staff Assistant", "Administrative and Staff Assistant/Vacant"))
+  })
+  
+  
+  CaseCap<-reactive({
+    OrgData%>%
+      summarise("RegionalCase"=sum(`Capacity`))
+  })
+  
+  pendingTotal <- reactive({pending()%>%
+      nrow()
+  }) 
+  
+  Current<-reactive({
+    format(round(((CaseCap()- pendingTotal())/ 15), 2), nsmall = 2)
+    
+  })
+  
+  output$CaseCapacity <- renderText({
+    paste0("Regional Case Capacity: ", CaseCap())
+    
+  })
+  
+  output$Referral<- renderText({
+    
+    paste0("Average Referral Rate: ", Referral$`Referral Rate`)
+    
+  })
+  
+  RefFTE<-reactive({
+    
+    format(round(((CaseCap()- Referral$`Referral Rate`)/ 15),2),nsmall=2)
+    
+  })
+  
+  output$FTERef<- renderUI({
+    if(RefFTE() >= 0.01){
+      
+      a <- paste0("<span style=color:#1E90FF>", "Referral FTE Deficit: ",  RefFTE(), "</span>")
+      
+    }else{
+      a <- paste0("<span style=color:#ff5733>", "Referral FTE Deficit: ",  RefFTE(), "</span>")
+    }
+    
+    HTML(a)
+    
+  })
+  output$RefFTEequ<-renderUI({
+    HTML(paste0(em("Referral Deficit Eq. "),"(", CaseCap(), "-", Referral$`Referral Rate`, ")", "/ ",  15, "= ", RefFTE(), br(),
+                em( "Current Deficit Eq. " ), "(",  CaseCap(), "- ", pendingTotal(), ")", "/ ", 15, "= ", Current()))
+  })
+  
+  output$CurrentFTE<-renderUI({
+    
+    if(Current() >= 0.01){
+      
+      b <- paste0("<span style=color:#1E90FF>", "Current FTE Deficit: ",  Current(), "</span>")
+      
+    }else{
+      b <- paste0("<span style=color:#ff5733>", "Current FTE Deficit: ",  Current(), "</span>")
+    }
+    
+    HTML(b)
+    
+  })
+  
+  output$Manager <- renderUI({  
+    lapply(1:length(manager()$`Position number`), function(i) {
+      
+      valueBox(value=
+                 tags$p(paste0(manager()$`Position`[i], "- ", manager()$`Position number`[i]), style="font-size: 14px;"), 
+               subtitle =HTML(paste0("Capacity: ", manager()$`Capacity`[i])),color="olive",  width=3)
+      
+    })
+    
+  })
+  
+  output$Specialists<- renderUI({
+    lapply(1:length(Specialist()$`Position number`), function(i) { 
+      valueBox(value=tags$p(paste0(Specialist()$`Position`[i], "- ",
+                                   Specialist()$`Position number`[i]),style = "font-size: 13px;"),
+               subtitle=HTML(paste0("Capacity: ", Specialist()$`Capacity`[i])),
+               color = "teal", #here display number1 one by one like name 
+               width = 3)
+    } )
+  })
+  
   
 }

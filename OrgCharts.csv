@@ -1,0 +1,33 @@
+Region,Position,Position number,Capacity
+PRO,Manager,P0641,8
+PRO,Enforcement Specialist/Vacant,P0928,15
+PRO,Enforcement Specialist,P4022,15
+PRO,Enforcement Specialist,P1063,15
+PRO,Administrative and Staff Assistant,P4458,0
+BRRO,Manager,P4291,8
+BRRO,Enforcement Specialist,P4020,15
+BRRO,Enforcement Specialist,P4162,15
+BRRO,Enforcement Specialist,P1067,15
+NRO,Manager,P0824,8
+NRO,Enforcement Specialist,P1068,15
+NRO,Enforcement Specialist,P1062,15
+NRO,Enforcement Specialist,P4024,15
+SWRO,Manager,P0925,8
+SWRO,Enforcement Specialist,P1064,15
+TRO,Manager,P4058,8
+TRO,Enforcement Specialist/Vacant,P4023,15
+TRO,Enforcement Specialist,P1065,15
+TRO,Enforcement Specialist/Vacant,P0933,15
+TRO,Enforcement Specialist/Vacant,P4308,15
+VRO,Manager,P1072,8
+VRO,Enforcement Specialist/Vacant,P4068,15
+VRO,Enforcement Specialist,P1066,15
+CO,Director/Vacant,P4040,8
+CO,Administrative and Staff Assistant/Vacant,P4338,4
+CO,Manager/Vacant,P4035,8
+CO,Manager,P4399,8
+CO,Program Coordinator,P4501,8
+CO,Enforcement Specialist/Vacant,P4502,8
+CO,Manager,P4055,8
+CO,Manager,P4292,8
+CO,Manager,P4358,8

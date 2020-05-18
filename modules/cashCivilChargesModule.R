@@ -4,7 +4,7 @@
 cashTotalsUI <- function(id) {
   ns <- NS(id)
   tagList(
-    box(title = strong("Cash Civil Charges"), height = 400,
+    box(title = strong("Cash Civil Charges By Region"), height = 400,
         helpText("Click a bar on the plot to drill down into program totals by region, then use 'Back' button to return to regional summary."),
         uiOutput(ns("back")),
         plotlyOutput(ns("cashPlot"))#, 
