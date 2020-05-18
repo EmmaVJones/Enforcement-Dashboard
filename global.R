@@ -336,7 +336,7 @@ orgchart<-function(input,output, session, OrgData, Referral, regionalData){
   })
   
   output$FTERef<- renderUI({
-    if(RefFTE() >= 0.01){
+    if(RefFTE() >= 0.00){
       
       a <- paste0("<span style=color:#1E90FF>", "Referral FTE Deficit: ",  RefFTE(), "</span>")
       
@@ -354,7 +354,7 @@ orgchart<-function(input,output, session, OrgData, Referral, regionalData){
   
   output$CurrentFTE<-renderUI({
     
-    if(Current() >= 0.01){
+    if(Current() >= 0.00){
       
       b <- paste0("<span style=color:#1E90FF>", "Current FTE Deficit: ",  Current(), "</span>")
       
