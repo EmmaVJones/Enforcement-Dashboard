@@ -22,6 +22,7 @@ pendingStatewide <- function(input, output, session, fullDataPull){
       summarize(`Pending Category Count` = n()) %>%
       pivot_wider(names_from = `Pending Status`, values_from =`Pending Category Count`) %>%
       ungroup()%>%
+      bind_rows(tibble(`Facility Region` = NA, `Active < 365` = NA, `Active > 365` = NA)) %>% # add in template in case one group not there
       group_by(`Facility Region`) %>%
       mutate(`Total Pending` = sum(`Active < 365`, `Active > 365`, na.rm = TRUE)) %>%
       plot_ly() %>%
@@ -127,7 +128,8 @@ FTEdeficitStatewide <- function(input, output, session, fullDataPull, orgData, r
                   summarise(`Region Capacity` = sum(Capacity)), by = c('Facility Region' = 'Region')) %>%
       left_join(referral, by = c('Facility Region' = 'Region')) %>%
       mutate(`Referral FTE Deficit` = (`Region Capacity` - `Referral Rate`)/15 , 
-             `Current FTE Deficit` = (`Region Capacity` - `Pending Total`)/15)  })
+             `Current FTE Deficit` = (`Region Capacity` - `Pending Total`)/15, 
+             `Current FTE Deficit Color` = ifelse(`Current FTE Deficit` < 0, "#ff5733","#1E90FF"))  })
   
   output$referralRatePlot <- renderPlotly({
     req(statewide())
@@ -143,7 +145,9 @@ FTEdeficitStatewide <- function(input, output, session, fullDataPull, orgData, r
   output$currentPlot <- renderPlotly({
     req(statewide())
     plot_ly(data = statewide(), x = ~`Facility Region`, y = ~`Current FTE Deficit`, type = 'bar', 
-            color = ~`Current FTE Deficit` < 0, colors = c("#1E90FF", "#ff5733"), name = ~ifelse(`Current FTE Deficit` < 0, "< 0", "> 0"),
+            #color = ~`Current FTE Deficit` < 0, colors = c("#1E90FF", "#ff5733"), name = ~ifelse(`Current FTE Deficit` < 0, "< 0", "> 0"),
+            color = ~`Current FTE Deficit Color`, colors = ~`Current FTE Deficit Color`,
+            name = ~ifelse(`Current FTE Deficit` < 0, "< 0", "> 0"),
             hoverinfo="text",text=~paste(sep="<br>",
                                          paste("Region: ",`Facility Region`),
                                          paste("Current FTE Deficit: ",format(`Current FTE Deficit`, digits = 2)))) %>%

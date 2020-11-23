@@ -20,7 +20,8 @@ ui <- dashboardPage(
                          menuSubItem("Valley", tabName = 'VRO')) )),
     dashboardBody(
       tags$style(HTML(".small_icon_test { font-size: 40px; }")),
-      tags$head(tags$style(HTML('.value-box {min-height: 70px;} .value-box-icon {height: 70px; line-height: 70px;} .value-box-content {padding-top: 0px; padding-bottom: 0px;}'))),
+      tags$head(tags$style(HTML('.value-box {min-height: 70px;} .value-box-icon {height: 70px; line-height: 70px;} .value-box-content {padding-top: 0px; padding-bottom: 0px;}
+                                .wrapper {height: auto !important; position:relative; overflow-x:hidden; overflow-y:hidden}'))), # wrapper is money to avoid double y axes appearing from body
       
       tabItems(
         # Dashboard tab content

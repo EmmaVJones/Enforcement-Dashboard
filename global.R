@@ -3,6 +3,8 @@ library(shinydashboard)
 library(tidyverse)
 library(plotly)
 library(lubridate)
+library(pool)
+library(config)
 
 source('modules/cashCivilChargesModule.R')
 source('modules/statewideModules.R')
@@ -14,10 +16,73 @@ load_data <- function() {
   shinyjs::show("main_content")
 }
 
+# get configuration settings
+conn <- config::get("connectionSettings")
 
-# Bring in test dataset, had to manually convert from .xls (Logi pull default) to .csv and delete header matter
-# Pull was from April 14, 2020 to Jan 1, 2019
-dat <- read_csv('LogiPulls/01012019_04142020.csv') %>%
+
+# Set up pool connection to production environment
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod, 
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
+#### Production Environment For testing
+#pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "SQL Server Native Client 11.0", 
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+#)
+
+onStop(function() {
+  poolClose(pool)
+})
+
+# Bring in live data from ODS
+# Facilities Data (for joining)
+enfFacilities <- pool %>% tbl("Enf_Facilities_View") %>%
+  as_tibble()
+
+# get start of year filter information
+startOfYear <- as.Date(paste0(year(Sys.Date()), '-01-01'))
+
+# Case data
+dat <- pool %>% tbl("Enf_enforcement_Cases_View") %>%
+  filter(between(Enc_Executed_Date, !! startOfYear, !! Sys.Date()) |
+           between(Enc_Nov_Date, !! startOfYear, !! Sys.Date()) |
+           between(Enc_Terminated_Date, !! startOfYear, !! Sys.Date()) ) %>%
+  as_tibble() %>%
+  dplyr::select(Enc_Enf_Facility_Id, 
+                `EA Number` = Enc_Ea_Number,
+                `Facility Region` = EFC_REGION,
+                `Case Manager` = Enf_Case_Mgr,
+                `Registration Number` = Enc_Reg_Fac_Num,
+                `Program Name` = Program_Name,
+                `Permit Number` = Enc_Pmt_Pc_Num,
+                `NOV Number` = Enc_Nov_Number,
+                `NOV Date` = Enc_Nov_Date,
+                `Executed Date` = Enc_Executed_Date,
+                `Term Date` = Enc_Terminated_Date, 
+                `Cash Civil Charge` = ECC_CASH_CIVIL_CHARGE, 
+                `Action Code` = EAC_DESCRIPTION, 
+                `Status Code` = Status_Code_Desc, 
+                Comments = Enc_Status_Comments) %>%
+  left_join(dplyr::select(enfFacilities, Enc_Enf_Facility_Id = Efc_Id, `Facility Name` = Efc_Facility_Name),
+            by = "Enc_Enf_Facility_Id") %>%
+  dplyr::select(`Facility Name`, everything(), -c(Enc_Enf_Facility_Id)) %>%
   # drop all rows with no data
   drop_na(`Facility Name`, `EA Number`) %>%
   # first fix date fields
@@ -30,19 +95,42 @@ dat <- read_csv('LogiPulls/01012019_04142020.csv') %>%
                                        is.na(`Program Name`) | 
                                          `Program Name` %in% c("PReP", "VPA", 
                                                                "Multimedia", "Oil Spill", 
-                                                               "Other", "Groundwater") ~ "Other", 
+                                                               "Other", "Groundwater","Const. Storm.") ~ "Other", 
                                        `Program Name` %in% c("UST", "AST") ~ "AST/UST", 
                                        TRUE ~ as.character(`Program Name`)))) %>%
   # add date of pull and calculate days Pending
-  mutate(pullDate = as.Date('2020-04-14'), #Sys.Date(),
-         `Days Pending` = trunc(time_length(interval(`NOV Date`, pullDate), unit = 'day')))
+  mutate(pullDate = as.Date(Sys.Date()),
+         `Days Pending` = case_when(is.na(`Term Date`) ~ trunc(time_length(interval(`NOV Date`, pullDate), unit = 'day')),
+                                    TRUE ~ trunc(time_length(interval(`NOV Date`, `Term Date`), unit = 'day'))))
 
 
+# Bring in test dataset, had to manually convert from .xls (Logi pull default) to .csv and delete header matter
+# Pull was from April 14, 2020 to Jan 1, 2019
+#dat <- read_csv('LogiPulls/01012019_04142020.csv') %>%
+#  # drop all rows with no data
+#  drop_na(`Facility Name`, `EA Number`) %>%
+#  # first fix date fields
+#  mutate(`NOV Date` = as.POSIXct(`NOV Date`, format = "%m/%d/%Y", tz = 'EST'),
+#         `Executed Date` = as.POSIXct(`Executed Date`, format = "%m/%d/%Y", tz = 'EST'),
+#         `Term Date` = as.POSIXct(`Term Date`, format = "%m/%d/%Y", tz = 'EST')) %>%
+#  # fix factor levels for plotting by program
+#  mutate(Program = as.factor(case_when(`Program Name` %in% c( "Solid Waste", "Hazardous Waste") ~ "Waste",
+#                                       `Program Name` %in% c("VWPP") ~ "VWP",
+#                                       is.na(`Program Name`) | 
+#                                         `Program Name` %in% c("PReP", "VPA", 
+#                                                               "Multimedia", "Oil Spill", 
+#                                                               "Other", "Groundwater") ~ "Other", 
+#                                       `Program Name` %in% c("UST", "AST") ~ "AST/UST", 
+#                                       TRUE ~ as.character(`Program Name`)))) %>%
+#  # add date of pull and calculate days Pending
+#  mutate(pullDate = as.Date('2020-04-14'), #Sys.Date(),
+#         `Days Pending` = trunc(time_length(interval(`NOV Date`, pullDate), unit = 'day')))
 
 
-OrgData<- read_csv('LOGIPulls/OrgCharts.csv')
+OrgData<- read_csv('LogiPulls/OrgCharts.csv') # mostly static, needs to be reviewed annually by enf program for accuracy
 
-Referral<- read_csv('LOGIPulls/ReferralRates.csv')
+Referral<- read_csv('LogiPulls/ReferralRates.csv') # mostly static, needs to be reviewed annually by enf program for accuracy
+# this could be calculated in time with guidance from enforcement program
 
 
 # tabItem module
