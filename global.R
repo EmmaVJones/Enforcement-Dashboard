@@ -57,7 +57,7 @@ enfFacilities <- pool %>% tbl("Enf_Facilities_View") %>%
   as_tibble()
 
 # get start of year filter information
-startOfYear <- as.Date(paste0(year(Sys.Date()), '-01-01'))
+startOfYear <- as.Date(paste0(year(Sys.Date())-1, '-01-01')) # use 2019 as starting point
 
 # Case data
 dat <- pool %>% tbl("Enf_enforcement_Cases_View") %>%
