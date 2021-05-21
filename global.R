@@ -5,6 +5,7 @@ library(plotly)
 library(lubridate)
 library(pool)
 library(config)
+library(dbplyr)
 
 source('modules/cashCivilChargesModule.R')
 source('modules/statewideModules.R')
@@ -53,14 +54,14 @@ onStop(function() {
 
 # Bring in live data from ODS
 # Facilities Data (for joining)
-enfFacilities <- pool %>% tbl("Enf_Facilities_View") %>%
+enfFacilities <- pool %>% tbl(in_schema("enf",  "Enf_Facilities_View")) %>%
   as_tibble()
 
 # get start of year filter information
 startOfYear <- as.Date(paste0(year(Sys.Date())-1, '-01-01')) # use 2019 as starting point
 
 # Case data
-dat <- pool %>% tbl("Enf_enforcement_Cases_View") %>%
+dat <- pool %>% tbl(in_schema("enf",  "Enf_enforcement_Cases_View")) %>%
   filter(between(Enc_Executed_Date, !! startOfYear, !! Sys.Date()) |
            between(Enc_Nov_Date, !! startOfYear, !! Sys.Date()) |
            between(Enc_Terminated_Date, !! startOfYear, !! Sys.Date()) ) %>%
