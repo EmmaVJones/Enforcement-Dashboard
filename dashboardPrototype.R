@@ -26,12 +26,26 @@ ui <- dashboardPage(
       tabItems(
         # Dashboard tab content
         tabItem(tabName = "statewide",
-                fluidRow(cashTotalsUI('cashMoney'),
-                         FTEdeficitStatewideUI('FTEstatewide'),
-                         pendingStatewideUI("statewidePending")),
-                fluidRow(terminatedStatewideUI("statewideTerminated"),
-                         monitoredStatewideUI("statewideMonitored"))
-                
+                fluidRow(
+                  pendingStatewideRegionUI("statewidePendingRegion"),
+                  pendingStatewideMediaUI("statewidePendingMedia"),
+                  monitoredStatewideRegionUI("statewideMonitoredRegion"),
+                  monitoredStatewideMediaUI("statewideMonitoredMedia"),
+                  enforcementActionsStatewideRegionUI("statewideEnforcementActionsRegion"),
+                  enforcementActionsStatewideMediaUI("statewideEnforcementActionsMedia"),
+                  cashTotalsRegionUI('cashMoneyRegion'),
+                  cashTotalsMediaUI('cashMoneyMedia'),
+                  terminatedStatewideRegionUI("statewideTerminatedRegion"),
+                  terminatedStatewideMediaUI("statewideTerminatedMedia"))#,
+                # fluidRow(
+                #          
+                #          #enforcemtn actions
+                #          cashTotalsUI('cashMoneyMedia'),
+                #          terminatedStatewideUI("statewideTerminatedMedia") )
+                #          
+                #          # cashTotalsUI('cashMoney'),
+                #          # FTEdeficitStatewideUI('FTEstatewide')
+                # 
         ),
         tabItem(tabName = 'BRRO', eachRegionUI("BRRO_")),
         tabItem(tabName = 'CO', eachRegionUI("CO_")),
@@ -53,12 +67,26 @@ server <- function(input, output) {
     notificationItem(text = paste0('Dashboard Data Pulled On: ', format(unique(dat$pullDate), "%m/%d/%y")),
                      icon = icon("exclamation-triangle"))  })
   
-  # Statewide Modules
-  callModule(cashTotals, 'cashMoney', dat)
-  callModule(FTEdeficitStatewide, 'FTEstatewide', dat, OrgData, Referral)
-  callModule(pendingStatewide, "statewidePending", dat)
-  callModule(terminatedStatewide, "statewideTerminated", dat)
-  callModule(monitoredStatewide, "statewideMonitored", dat)
+  # Statewide Modules- By Region
+  callModule(pendingStatewideRegion, "statewidePendingRegion", dat)
+  callModule(monitoredStatewideRegion, "statewideMonitoredRegion", dat)
+  callModule(enforcementActionsStatewideRegion, "statewideEnforcementActionsRegion", dat)
+  callModule(cashTotalsRegion, 'cashMoneyRegion', dat)
+  callModule(terminatedStatewideRegion, "statewideTerminatedRegion", dat)
+  
+  
+  # Statewide Modules- By Media
+  callModule(pendingStatewideMedia, "statewidePendingMedia", dat)
+  callModule(monitoredStatewideMedia, "statewideMonitoredMedia", dat)
+  callModule(enforcementActionsStatewideMedia, "statewideEnforcementActionsMedia", dat)
+  callModule(cashTotalsMedia, 'cashMoneyMedia', dat)
+  callModule(terminatedStatewideMedia, "statewideTerminatedMedia", dat)
+  
+  # old version included these
+  # callModule(cashTotals, 'cashMoney', dat)
+  # callModule(FTEdeficitStatewide, 'FTEstatewide', dat, OrgData, Referral)
+  
+  
   
   
   # Regional Modules

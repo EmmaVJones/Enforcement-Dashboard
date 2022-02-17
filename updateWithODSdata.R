@@ -15,17 +15,17 @@ pool <- dbPool(
 #"Enf_Admin_Proceed_View" "Enf_ECM_Docs_View" "Enf_enforcement_Cases_View" "Enf_Facilities_View" 
 #"Enf_Respon_Parties_View"  "Enf_Settle_Details_View"
 
-adminProceed <- pool %>% tbl("Enf_Admin_Proceed_View") %>%
+adminProceed <- pool %>% tbl(in_schema("enf", "Enf_Admin_Proceed_View")) %>%
   as_tibble()
-ECMdocs <- pool %>% tbl("Enf_ECM_Docs_View") %>%
+ECMdocs <- pool %>% tbl(in_schema("enf", "Enf_ECM_Docs_View")) %>%
   as_tibble()
-enfCases <- pool %>% tbl("Enf_enforcement_Cases_View") %>%
+enfCases <- pool %>% tbl(in_schema("enf", "Enf_enforcement_Cases_View")) %>%
   as_tibble()
-enfFacilities <- pool %>% tbl("Enf_Facilities_View") %>%
+enfFacilities <- pool %>%  tbl(in_schema("enf",  "Enf_Facilities_View")) %>%
   as_tibble()
-respParties <- pool %>% tbl("Enf_Respon_Parties_View") %>%
+respParties <- pool %>% tbl(in_schema("enf", "Enf_Respon_Parties_View")) %>%
   as_tibble()
-settlementDetails <- pool %>% tbl("Enf_Settle_Details_View") %>%
+settlementDetails <- pool %>% tbl(in_schema("enf", "Enf_Settle_Details_View")) %>%
   as_tibble()
 
 

@@ -40,6 +40,7 @@ vignettes/*.pdf
 
 
 # drop all data
+*.jpg
 *.yml
 *.docx
 *.zip

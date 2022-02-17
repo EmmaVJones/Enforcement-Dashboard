@@ -28,7 +28,7 @@ pool <- dbPool(
   # Production Environment
   Server= "DEQ-SQLODS-PROD,50000",
   dbname = "ODS",
-  UID = conn$UID_prod, 
+  UID = conn$UID_prod,
   PWD = conn$PWD_prod,
   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
@@ -40,13 +40,13 @@ pool <- dbPool(
   trusted_connection = "yes"
 )
 #### Production Environment For testing
-#pool <- dbPool(
+# pool <- dbPool(
 #  drv = odbc::odbc(),
-#  Driver = "SQL Server Native Client 11.0", 
+#  Driver = "ODBC Driver 11 for SQL Server",#Driver = "SQL Server Native Client 11.0",
 #  Server= "DEQ-SQLODS-PROD,50000",
 #  dbname = "ODS",
 #  trusted_connection = "yes"
-#)
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -62,9 +62,9 @@ startOfYear <- as.Date(paste0(year(Sys.Date())-1, '-01-01')) # use 2019 as start
 
 # Case data
 dat <- pool %>% tbl(in_schema("enf",  "Enf_enforcement_Cases_View")) %>%
-  filter(between(Enc_Executed_Date, !! startOfYear, !! Sys.Date()) |
-           between(Enc_Nov_Date, !! startOfYear, !! Sys.Date()) |
-           between(Enc_Terminated_Date, !! startOfYear, !! Sys.Date()) ) %>%
+  # filter(between(Enc_Executed_Date, !! startOfYear, !! Sys.Date()) |
+  #          between(Enc_Nov_Date, !! startOfYear, !! Sys.Date()) |
+  #          between(Enc_Terminated_Date, !! startOfYear, !! Sys.Date()) ) %>%
   as_tibble() %>%
   dplyr::select(Enc_Enf_Facility_Id, 
                 `EA Number` = Enc_Ea_Number,
@@ -180,7 +180,7 @@ eachRegionUI <- function(id){
 
 eachRegion <- function(input,output, session, regionalData){
   pending <- reactive({
-    filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent")) %>%
+    filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent", "Pending APA")) %>%
       mutate(`Pending Status` = as.factor(case_when(`Days Pending` >= 365 ~ "Active > 365", 
                                                     TRUE ~ "Active < 365")))  })
   
@@ -380,7 +380,7 @@ eachRegion <- function(input,output, session, regionalData){
 orgchart<-function(input,output, session, OrgData, Referral, regionalData){
   
   pending <- reactive({
-    filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent")) %>%
+    filter(regionalData, `Status Code` %in% c("Pending", "Pending Consent", "Pending APA")) %>%
       mutate(`Pending Status` = as.factor(case_when(`Days Pending` >= 365 ~ "Active > 365", 
                                                     TRUE ~ "Active < 365")))  })
   
